@@ -1,8 +1,8 @@
-
 from flask import Flask, request, json
 import telegram
 import os
 import random
+from quran_search import QuranSearch
 
 
 app = Flask(__name__)
@@ -11,6 +11,8 @@ app.config['JSON_AS_ASCII'] = False
 
 TOKEN = ''
 bot = telegram.Bot(TOKEN)
+
+WORD_BASE_URL = "http://uxquran.com/apps/quran-ayat/"
 
 
 HELP_MESSAGE = """Assalamu Alaikum, Welcome to the Noble Quran chatbot.
@@ -28,10 +30,11 @@ HELP_MESSAGE = """Assalamu Alaikum, Welcome to the Noble Quran chatbot.
         /start - Help on how to use the bot
         /index - List of surahs with indices
         /random - A random ayat
+        /search - Search for arabic/english word in the quran
         /version - Version of the bot
         /feedback - Send feedback
 """
-VERSION = "1.0.7"
+VERSION = "1.1.0"
 
 @app.route('/{}'.format(TOKEN), methods=['POST'])
 def quran_bot_webhook():
@@ -62,9 +65,21 @@ def quran_bot_webhook():
         en_ayat = "{}\n{}".format(index_str, get_ayat_en(surah, ayat))
         bot.sendMessage(chat_id=chat_id, text=ar_ayat)
         bot.sendMessage(chat_id=chat_id, text=en_ayat)
+        word_msg = "For word by word meaning:\n" + WORD_BASE_URL + "?sura={}&aya={}".format(surah_display, ayat_display)
+        bot.sendMessage(chat_id=chat_id, text=word_msg)
     elif text == "/feedback":
         feedback_msg = "For feedback and suggestions, please send an email to support@uxquran.com"
         bot.sendMessage(chat_id=chat_id, text=feedback_msg, reply_to_message_id=msg_id)
+    elif "/search" in text:
+        # search command
+        params = text.split(" ")
+        if len(params) > 1:
+            input = params[1]
+            response_msg = search_word(input)
+            bot.sendMessage(chat_id=chat_id, text=response_msg, reply_to_message_id=msg_id)
+        else:
+            error_msg = "For search, please send message in /search<space><input_word> format.\nFor eg. /search الحمد or /search mercy."
+            bot.sendMessage(chat_id=chat_id, text=error_msg, reply_to_message_id=msg_id)
     else:
        try:
             is_arabic = False
@@ -87,6 +102,8 @@ def quran_bot_webhook():
                         index_str = "Surah {} ({}:{}:{}) ".format(surah_name, surah_display, ayat_display, word_display)
                         en_ayat = "{}\n{}".format(index_str, get_ayat_word(surah, ayat, word))
                         bot.sendMessage(chat_id=chat_id, text=en_ayat)
+                        word_msg = "For word by word meaning:\n" + WORD_BASE_URL + "?sura={}&aya={}".format(surah_display, ayat_display)
+                        bot.sendMessage(chat_id=chat_id, text=word_msg)
                 else:
                     # normal sentences
                     if "ar" in text:
@@ -119,6 +136,8 @@ def quran_bot_webhook():
                         else:
                             bot.sendMessage(chat_id=chat_id, text=ar_ayat)
                             bot.sendMessage(chat_id=chat_id, text=en_ayat)
+                            word_msg = "For word by word meaning:\n" + WORD_BASE_URL + "?sura={}&aya={}".format(surah_display, ayat_display)
+                            bot.sendMessage(chat_id=chat_id, text=word_msg)
             else:
                 bot.sendMessage(chat_id=chat_id, text=HELP_MESSAGE, reply_to_message_id=msg_id)
 
@@ -182,4 +201,14 @@ def get_surah_title(surah):
     json_data = open(os.path.join(app.static_folder, "surahlist.json"), "r")
     data = json.load(json_data)
     return data[surah]["transliteration_en"]
+
+def search_word(input):
+    data_path = os.path.join(app.static_folder, "wordslist.json")
+    results = QuranSearch.search_word(input, count = 5, json_path=data_path)
+    response_text = ""
+    for item in results:
+        response_text = response_text + "\n\n{}:{} ".format(item["word"]["sura"], item["word"]["aya"]) + item["word"]["ar"] + " " + item["word"]["tr"]
+    response_text = response_text + "\n\nFor more: " + WORD_BASE_URL + "?search={}".format(input)
+    return response_text
+
 
