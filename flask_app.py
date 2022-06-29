@@ -3,7 +3,7 @@ import telegram
 import os
 import random
 from quran_search import QuranSearch
-
+from quran_subscriptions_db import QuranSubscriptionsDB
 
 app = Flask(__name__)
 app.config['JSON_AS_ASCII'] = False
@@ -14,6 +14,7 @@ bot = telegram.Bot(TOKEN)
 
 WORD_BASE_URL = "http://uxquran.com/apps/quran-ayat/"
 
+subscriptionsDb = QuranSubscriptionsDB(os.path.join(app.static_folder, "daily.sqlite"))
 
 HELP_MESSAGE = """Assalamu Alaikum, Welcome to the Noble Quran chatbot.
 
@@ -34,7 +35,7 @@ HELP_MESSAGE = """Assalamu Alaikum, Welcome to the Noble Quran chatbot.
         /version - Version of the bot
         /feedback - Send feedback
 """
-VERSION = "1.1.0"
+VERSION = "1.1.1"
 
 @app.route('/{}'.format(TOKEN), methods=['POST'])
 def quran_bot_webhook():
@@ -48,11 +49,14 @@ def quran_bot_webhook():
     # the first time you chat with the bot AKA the welcoming message
     if text == "/start":
         bot.sendMessage(chat_id=chat_id, text=HELP_MESSAGE, reply_to_message_id=msg_id)
+
     elif text == "/index":
         index_message = get_surah_list()
         bot.sendMessage(chat_id=chat_id, text=index_message, reply_to_message_id=msg_id)
+
     elif text == "/version":
         bot.sendMessage(chat_id=chat_id, text=VERSION, reply_to_message_id=msg_id)
+
     elif text == "/random":
         indices = get_random_indices()
         surah = indices[0]
@@ -67,9 +71,35 @@ def quran_bot_webhook():
         bot.sendMessage(chat_id=chat_id, text=en_ayat)
         word_msg = "For word by word meaning:\n" + WORD_BASE_URL + "?sura={}&aya={}".format(surah_display, ayat_display)
         bot.sendMessage(chat_id=chat_id, text=word_msg)
+
     elif text == "/feedback":
         feedback_msg = "For feedback and suggestions, please send an email to support@uxquran.com"
         bot.sendMessage(chat_id=chat_id, text=feedback_msg, reply_to_message_id=msg_id)
+
+    elif text == "/subscribe":
+        user_name = None
+        if update.message.from_user:
+            user_name = update.message.from_user["username"]
+        if not user_name:
+            user_name = update.message.chat.username
+        if not user_name:
+            user_name = chat_id
+        subscribe(user_name, chat_id)
+        feedback_msg = "You have been successfully subscribed to the daily Quran verses service.\nTo unsubscribe anytime, please send the message /unsubscribe."
+        bot.sendMessage(chat_id=chat_id, text=feedback_msg, reply_to_message_id=msg_id)
+
+    elif text == "/unsubscribe":
+        user_name = None
+        if update.message.from_user:
+            user_name = update.message.from_user["username"]
+        if not user_name:
+            user_name = update.message.chat.username
+        if not user_name:
+            user_name = chat_id
+        unsubscribe(user_name)
+        feedback_msg = "You have been unsubscribed from the daily Quran verses service."
+        bot.sendMessage(chat_id=chat_id, text=feedback_msg, reply_to_message_id=msg_id)
+
     elif "/search" in text:
         # search command
         params = text.split(" ")
@@ -210,5 +240,12 @@ def search_word(input):
         response_text = response_text + "\n\n{}:{} ".format(item["word"]["sura"], item["word"]["aya"]) + item["word"]["ar"] + " " + item["word"]["tr"]
     response_text = response_text + "\n\nFor more: " + WORD_BASE_URL + "?search={}".format(input)
     return response_text
+
+def subscribe(user_id, chat_id):
+    subscriptionsDb.add_subscription(("{}".format(chat_id), "{}".format(user_id)))
+
+def unsubscribe(user_id):
+    subscriptionsDb.delete_subscription("{}".format(user_id))
+
 
 
