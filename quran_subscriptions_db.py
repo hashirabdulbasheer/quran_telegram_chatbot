@@ -3,7 +3,7 @@
 import sqlite3
 
 class QuranSubscriptionsDB:
-    
+
     conn = None
 
     def __init__(self, db_file):
@@ -14,7 +14,7 @@ class QuranSubscriptionsDB:
             self.conn = sqlite3.connect(db_file)
         except Exception as e:
             print(e)
-    
+
     def add_subscription(self, subscription):
         sql = ''' INSERT OR REPLACE INTO subscriptions(chat_id,user_id)
                   VALUES(?,?) '''
@@ -22,7 +22,7 @@ class QuranSubscriptionsDB:
         cur.execute(sql, subscription)
         self.conn.commit()
         return cur.lastrowid
-        
+
     def select_all(self):
         cur = self.conn.cursor()
         cur.execute("SELECT * FROM subscriptions")
@@ -30,12 +30,12 @@ class QuranSubscriptionsDB:
         chat_ids = []
         for row in rows:
             chat_ids.append(row[0])
-        
+
         return chat_ids
-        
-    def delete_subscription(self, user_id):
-        sql = "DELETE FROM subscriptions WHERE user_id=?"
+
+    def delete_subscription(self, chat_id):
+        sql = "DELETE FROM subscriptions WHERE chat_id=?"
         cur = self.conn.cursor()
-        cur.execute(sql, (user_id,))
+        cur.execute(sql, (chat_id,))
         self.conn.commit()
 

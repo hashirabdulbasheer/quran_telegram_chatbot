@@ -8,8 +8,9 @@ from quran_subscriptions_db import QuranSubscriptionsDB
 app = Flask(__name__)
 app.config['JSON_AS_ASCII'] = False
 
+# set the telegram token here
+TOKEN = os.getenv("TELEGRAM_TOKEN")
 
-TOKEN = ''
 bot = telegram.Bot(TOKEN)
 
 WORD_BASE_URL = "http://uxquran.com/apps/quran-ayat/"
@@ -76,12 +77,16 @@ def quran_bot_webhook():
         feedback_msg = "For feedback and suggestions, please send an email to support@uxquran.com"
         bot.sendMessage(chat_id=chat_id, text=feedback_msg, reply_to_message_id=msg_id)
 
+    elif text == "/report":
+        feedback_msg = "chat_id={} user_id={}".format(chat_id, update.message.from_user)
+        bot.sendMessage(chat_id=chat_id, text=feedback_msg, reply_to_message_id=msg_id)
+
     elif text == "/subscribe":
         user_name = None
         if update.message.from_user:
             user_name = update.message.from_user["username"]
         if not user_name:
-            user_name = update.message.chat.username
+            user_name = update.message.from_user["first_name"]
         if not user_name:
             user_name = chat_id
         subscribe(user_name, chat_id)
@@ -89,14 +94,7 @@ def quran_bot_webhook():
         bot.sendMessage(chat_id=chat_id, text=feedback_msg, reply_to_message_id=msg_id)
 
     elif text == "/unsubscribe":
-        user_name = None
-        if update.message.from_user:
-            user_name = update.message.from_user["username"]
-        if not user_name:
-            user_name = update.message.chat.username
-        if not user_name:
-            user_name = chat_id
-        unsubscribe(user_name)
+        unsubscribe(chat_id)
         feedback_msg = "You have been unsubscribed from the daily Quran verses service."
         bot.sendMessage(chat_id=chat_id, text=feedback_msg, reply_to_message_id=msg_id)
 
@@ -244,8 +242,8 @@ def search_word(input):
 def subscribe(user_id, chat_id):
     subscriptionsDb.add_subscription(("{}".format(chat_id), "{}".format(user_id)))
 
-def unsubscribe(user_id):
-    subscriptionsDb.delete_subscription("{}".format(user_id))
+def unsubscribe(chat_id):
+    subscriptionsDb.delete_subscription("{}".format(chat_id))
 
 
 
