@@ -22,17 +22,12 @@ HELP_MESSAGE = """Assalamu Alaikum, Welcome to the Noble Quran chatbot.
     To get any ayat and its english translation, send a message in surah:ayat format.
     For eg. send message '2:255' to get ayatul kursi in both english and arabic.
 
-    To get the arabic ayat alone send message in ar surah:ayat format.
-    For eg. send message 'ar 2:255' to get arabic ayatul kursi.
-
-    To get the english ayat alone, send message in en surah:ayat format.
-    For eg. send message 'en 2:255' to get english translation of ayatul kursi.
-
     Commands:
-        /start - Help on how to use the bot
-        /index - List of surahs with indices
         /random - A random ayat
         /search - Search for arabic/english word in the quran
+        /subscribe - Receive a verse daily
+        /start - Help on how to use the bot
+        /index - List of surahs with indices
         /version - Version of the bot
         /feedback - Send feedback
 """
@@ -143,6 +138,7 @@ def quran_bot_webhook():
                         text = text.replace("en", "")
                         text = text.strip()
 
+                    params = text.split(":")
                     surah = int(params[0]) - 1
                     ayat  = int(params[1]) - 1
 
