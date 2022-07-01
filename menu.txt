@@ -1,0 +1,8 @@
+random - A random aya
+search - Search a word 
+subscribe - Receive daily verse
+start - Help
+index - List of sura
+version - Version
+feedback - Feedback
+
