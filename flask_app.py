@@ -31,7 +31,7 @@ HELP_MESSAGE = """Assalamu Alaikum, Welcome to the Noble Quran chatbot.
         /version - Version of the bot
         /feedback - Send feedback
 """
-VERSION = "1.1.1"
+VERSION = "1.1.2"
 
 @app.route('/{}'.format(TOKEN), methods=['POST'])
 def quran_bot_webhook():
@@ -166,10 +166,13 @@ def quran_bot_webhook():
                 bot.sendMessage(chat_id=chat_id, text=HELP_MESSAGE, reply_to_message_id=msg_id)
 
        except Exception as e:
-           # if things went wrong
-          #bot.sendMessage(chat_id=chat_id, text=str(e), reply_to_message_id=msg_id)
-          error_message = "Sorry, I am not able to understand that. For help send /start."
-          bot.sendMessage(chat_id=chat_id, text=error_message, reply_to_message_id=msg_id)
+            # if things went wrong
+            error_message = "Sorry, I am not able to understand that. For help send /start."
+            if not str(e) and str(e) == "":
+                error_message = "Sorry, I am not able to understand that. For help send /start."
+            else:
+                error_message = str(e)
+            bot.sendMessage(chat_id=chat_id, text=str(e), reply_to_message_id=msg_id)
 
     return 'ok'
 
@@ -180,6 +183,7 @@ def get_ayat_ar(surah, ayat):
         return "Invalid surah number. Please send a surah number between 1 and 114."
     if ayat > len(data["quran"]["sura"][surah]["aya"]) or ayat == len(data["quran"]["sura"][surah]["aya"]):
         surahIndex = surah + 1
+        raise Exception("Invalid ayat number. Surah {} has only {} ayats".format(surahIndex, len(data["quran"]["sura"][surah]["aya"])))
         return "Invalid ayat number. Surah {} has only {} ayats".format(surahIndex, len(data["quran"]["sura"][surah]["aya"]))
     else:
         return data["quran"]["sura"][surah]["aya"][ayat]["text"]
@@ -191,6 +195,7 @@ def get_ayat_en(surah, ayat):
         return "Invalid surah number. Please send a surah number between 1 and 114."
     if ayat > len(data["quran"]["sura"][surah]["aya"]) or ayat == len(data["quran"]["sura"][surah]["aya"]):
         surahIndex = surah + 1
+        raise Exception("Invalid ayat number. Surah {} has only {} ayats".format(surahIndex, len(data["quran"]["sura"][surah]["aya"])))
         return "Invalid ayat number. Surah {} has only {} ayats".format(surahIndex, len(data["quran"]["sura"][surah]["aya"]))
     else:
         return data["quran"]["sura"][surah]["aya"][ayat]["text"]
@@ -202,8 +207,13 @@ def get_ayat_word(surah, ayat, word):
         return "Invalid surah number. Please send a surah number between 1 and 114."
     if ayat > len(data) or ayat == len(data):
         surahIndex = surah + 1
+        raise Exception("Invalid ayat number. Surah {} has only {} ayats".format(surahIndex, len(data)))
         return "Invalid ayat number. Surah {} has only {} ayats".format(surahIndex, len(data))
     else:
+        if word > len(data[ayat]) or word == len(data[ayat]):
+            wordIndex = word + 1
+            raise Exception("Invalid word number. This aya doesn't have {} words".format(wordIndex))
+            return "Invalid word number. This aya doesn't have {} words".format(wordIndex)
         return "{}\n{}".format(data[ayat][word]["ar"], data[ayat][word]["tr"])
 
 def get_surah_list():
