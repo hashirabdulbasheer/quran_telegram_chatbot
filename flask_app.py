@@ -211,8 +211,7 @@ def get_ayat_word(surah, ayat, word):
         return "Invalid ayat number. Surah {} has only {} ayats".format(surahIndex, len(data))
     else:
         if word > len(data[ayat]) or word == len(data[ayat]):
-            wordIndex = word + 1
-            raise Exception("Invalid word number. This aya doesn't have {} words".format(wordIndex))
+            raise Exception("Invalid word number. This aya has only {} words".format(len(data[ayat])))
             return "Invalid word number. This aya doesn't have {} words".format(wordIndex)
         return "{}\n{}".format(data[ayat][word]["ar"], data[ayat][word]["tr"])
 
