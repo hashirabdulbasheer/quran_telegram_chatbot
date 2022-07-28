@@ -38,7 +38,7 @@ def get_ayat_ar(surah, ayat):
         return data["quran"]["sura"][surah]["aya"][ayat]["text"]
 
 def get_ayat_en(surah, ayat):
-    json_data = open(os.path.join(STATIC_FOLDER, "sahih.json"), "r")
+    json_data = open(os.path.join(STATIC_FOLDER, "clear.json"), "r")
     data = json.load(json_data)
     if surah > 114 or surah == 114:
         return "Invalid surah number. Please send a surah number between 1 and 114."
