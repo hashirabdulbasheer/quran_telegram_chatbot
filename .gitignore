@@ -26,3 +26,5 @@ htmlcov/
 *,cover
 *.npy
 __MACOSX/
+wsgi.py
+*.pem
