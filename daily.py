@@ -4,14 +4,24 @@ from flask import json
 import os
 import random
 from quran_subscriptions_db import QuranSubscriptionsDB
+from dotenv import load_dotenv
+import sys
+
+if len(sys.argv) < 1:
+    print("Please pass home directory as argument")
+    exit(0)
+
+# load env
+project_home = sys.argv[0]
+load_dotenv(os.path.join(project_home, '.env'))
 
 WORD_BASE_URL = "http://uxquran.com/apps/quran-ayat/"
 
 # The folder path containing the resource files
-STATIC_FOLDER = ""
+STATIC_FOLDER = os.getenv("STATIC_FOLDER")
 
 # Telegram token
-TOKEN = ''
+TOKEN = os.getenv("TELEGRAM_TOKEN")
 
 bot = telegram.Bot(TOKEN)
 
@@ -38,7 +48,7 @@ def get_ayat_ar(surah, ayat):
         return data["quran"]["sura"][surah]["aya"][ayat]["text"]
 
 def get_ayat_en(surah, ayat):
-    json_data = open(os.path.join(STATIC_FOLDER, "clear.json"), "r")
+    json_data = open(os.path.join(STATIC_FOLDER, "haleem.json"), "r")
     data = json.load(json_data)
     if surah > 114 or surah == 114:
         return "Invalid surah number. Please send a surah number between 1 and 114."
