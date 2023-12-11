@@ -18,9 +18,11 @@ _mailinglist
 .idea/
 docs/_build/
 .vscode
-
+*.sqlite
 # Coverage reports
 htmlcov/
 .coverage
 .coverage.*
 *,cover
+*.npy
+__MACOSX/
