@@ -196,4 +196,3 @@ class QuranSearch:
             return results
 
         return results
-

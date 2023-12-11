@@ -38,4 +38,3 @@ class QuranSubscriptionsDB:
         cur = self.conn.cursor()
         cur.execute(sql, (chat_id,))
         self.conn.commit()
-

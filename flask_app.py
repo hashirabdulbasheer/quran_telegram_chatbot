@@ -5,6 +5,17 @@ import random
 from quran_search import QuranSearch
 from quran_subscriptions_db import QuranSubscriptionsDB
 
+from ask_sdk_core.skill_builder import SkillBuilder
+from flask_ask_sdk.skill_adapter import SkillAdapter
+from ask_sdk_core.utils import is_request_type,is_intent_name
+from ask_sdk_core.handler_input import HandlerInput
+from ask_sdk_model.ui import SimpleCard
+from hijri_converter import convert
+from datetime import date
+
+from similar_verses_hugging import QuranSimilarVerses
+# import openai
+
 app = Flask(__name__)
 app.config['JSON_AS_ASCII'] = False
 
@@ -17,6 +28,12 @@ WORD_BASE_URL = "http://uxquran.com/apps/quran-ayat/"
 
 subscriptionsDb = QuranSubscriptionsDB(os.path.join(app.static_folder, "daily.sqlite"))
 
+# openai.api_key  = os.getenv('OPENAI_API_KEY')
+
+hugging_face_key = os.getenv("HUGGING_FACE_KEY")
+
+aiChat = QuranSimilarVerses(app.static_folder,  "embeddings_hugg", "input.json", hugging_face_key)
+
 HELP_MESSAGE = """Assalamu Alaikum, Welcome to the Noble Quran chatbot.
 
     To get any ayat and its english translation, send a message in surah:ayat format.
@@ -24,6 +41,7 @@ HELP_MESSAGE = """Assalamu Alaikum, Welcome to the Noble Quran chatbot.
 
     Commands:
         /random - A random ayat
+        /ai - Find verses that might answer a question
         /search - Search for arabic/english word in the quran
         /subscribe - Receive a verse daily
         /start - Help on how to use the bot
@@ -31,7 +49,124 @@ HELP_MESSAGE = """Assalamu Alaikum, Welcome to the Noble Quran chatbot.
         /version - Version of the bot
         /feedback - Send feedback
 """
-VERSION = "1.1.2"
+VERSION = "1.1.4"
+
+
+# alexa
+skill_builder = SkillBuilder()
+
+
+@skill_builder.request_handler(can_handle_func=is_request_type("LaunchRequest"))
+def launch_request_handler(handler_input):
+    indices = get_random_indices()
+    surah = indices[0]
+    ayat = indices[1]
+    surah_name = indices[2]
+    surah_display = surah + 1
+    ayat_display = ayat + 1
+    index_str = "Surah {} ({}:{}) ".format(surah_name, surah_display, ayat_display)
+    speech_text = "{}\n{}".format(index_str, get_ayat_en(surah, ayat))
+    card_text = "{}".format(get_ayat_en(surah, ayat))
+
+    return handler_input.response_builder.speak(speech_text).set_card(
+        SimpleCard(index_str, card_text)).set_should_end_session(
+        True).response
+
+
+@skill_builder.request_handler(can_handle_func=is_intent_name("randomIntent"))
+def random_intent_handler(handler_input):
+    indices = get_random_indices()
+    surah = indices[0]
+    ayat = indices[1]
+    surah_name = indices[2]
+    surah_display = surah + 1
+    ayat_display = ayat + 1
+    index_str = "Surah {} ({}:{}) ".format(surah_name, surah_display, ayat_display)
+    speech_text = "{}\n{}".format(index_str, get_ayat_en(surah, ayat))
+    card_text = "{}".format(get_ayat_en(surah, ayat))
+
+    return handler_input.response_builder.speak(speech_text).set_card(
+        SimpleCard(index_str, card_text)).set_should_end_session(
+        True).response
+
+
+@skill_builder.request_handler(can_handle_func=is_intent_name("AMAZON.HelpIntent"))
+def help_intent_handler(handler_input):
+    speech_text = "You can say - Alexa, open Quran's daily verse"
+
+    return handler_input.response_builder.speak(speech_text).ask(
+        speech_text).set_card(SimpleCard(
+            "uxQuran Help", speech_text)).response
+
+
+@skill_builder.request_handler(
+    can_handle_func=lambda handler_input:
+        is_intent_name("AMAZON.CancelIntent")(handler_input) or
+        is_intent_name("AMAZON.StopIntent")(handler_input))
+def cancel_and_stop_intent_handler(handler_input):
+    speech_text = "Goodbye!"
+
+    return handler_input.response_builder.speak(speech_text).set_card(
+        SimpleCard("uxQuran", speech_text)).response
+
+
+@skill_builder.request_handler(can_handle_func=is_intent_name("AMAZON.FallbackIntent"))
+def fallback_handler(handler_input):
+    speech = (
+        "The skill can't help you with that.  "
+        "You can say Alexa, open Quran's daily verse")
+    reprompt = "You can say Alexa, open Quran's daily verse"
+    handler_input.response_builder.speak(speech).ask(reprompt)
+    return handler_input.response_builder.response
+
+
+@skill_builder.request_handler(can_handle_func=is_request_type("SessionEndedRequest"))
+def session_ended_request_handler(handler_input):
+    return handler_input.response_builder.response
+
+
+@skill_builder.exception_handler(can_handle_func=lambda i, e: True)
+def all_exception_handler(handler_input, exception):
+    """Catch all exception handler, log exception and
+    respond with custom message.
+    """
+
+    speech = "Sorry, there was some problem. Please try again!!"
+    handler_input.response_builder.speak(speech).ask(speech)
+
+    return handler_input.response_builder.response
+
+
+skill_adapter = SkillAdapter(
+    skill=skill_builder.create(), skill_id="amzn1.ask.skill.c99ca83f-f519-4e43-aa47-8417b0312dc0", app=app)
+
+@app.route('/alexa', methods=['POST', 'GET'])
+def quran_bot_alexa():
+    return skill_adapter.dispatch_request()
+#     indices = get_random_indices()
+#     surah = indices[0]
+#     ayat = indices[1]
+#     surah_name = indices[2]
+#     surah_display = surah + 1
+#     ayat_display = ayat + 1
+#     index_str = "Surah {} ({}:{}) ".format(surah_name, surah_display, ayat_display)
+#     en_ayat = "{}\n{}".format(index_str, get_ayat_en(surah, ayat))
+#     resp = {
+#             "version": "string",
+#             "response": {
+#                 "outputSpeech": {
+#                         "type": "PlainText",
+#                         "text": "{}".format(en_ayat),
+#                         "playBehavior": "REPLACE_ENQUEUED"
+#                 },
+#             "shouldEndSession": True
+#         }
+#     }
+#     print("alexa called")
+#     return json.dumps(resp)
+
+
+# telegram bot
 
 @app.route('/{}'.format(TOKEN), methods=['POST'])
 def quran_bot_webhook():
@@ -93,6 +228,17 @@ def quran_bot_webhook():
         feedback_msg = "You have been unsubscribed from the daily Quran verses service."
         bot.sendMessage(chat_id=chat_id, text=feedback_msg, reply_to_message_id=msg_id)
 
+    elif "/ai" in text:
+        params = text.replace("/ai", "" )
+        if len(params) > 1:
+            input = params
+            response_msg = aiChat.get_similar(input)
+            # response_msg = "Sorry, ai is unavailable for sometime. we will bring it back on soon, Insha Allah"
+            bot.sendMessage(chat_id=chat_id, text=response_msg, reply_to_message_id=msg_id)
+        else:
+            error_msg = "For AI, please send message in /ai<space>question format.\nFor eg. /ai How many years did Ashabul Khaf sleep in the cave."
+            bot.sendMessage(chat_id=chat_id, text=error_msg, reply_to_message_id=msg_id)
+
     elif "/search" in text:
         # search command
         params = text.split(" ")
@@ -125,8 +271,8 @@ def quran_bot_webhook():
                         index_str = "Surah {} ({}:{}:{}) ".format(surah_name, surah_display, ayat_display, word_display)
                         en_ayat = "{}\n{}".format(index_str, get_ayat_word(surah, ayat, word))
                         bot.sendMessage(chat_id=chat_id, text=en_ayat)
-                        word_msg = "For word by word meaning:\n" + WORD_BASE_URL + "?sura={}&aya={}".format(surah_display, ayat_display)
-                        bot.sendMessage(chat_id=chat_id, text=word_msg)
+                        # word_msg = "For word by word meaning:\n" + WORD_BASE_URL + "?sura={}&aya={}".format(surah_display, ayat_display)
+                        # bot.sendMessage(chat_id=chat_id, text=word_msg)
                 else:
                     # normal sentences
                     if "ar" in text:
@@ -160,8 +306,8 @@ def quran_bot_webhook():
                         else:
                             bot.sendMessage(chat_id=chat_id, text=ar_ayat)
                             bot.sendMessage(chat_id=chat_id, text=en_ayat)
-                            word_msg = "For word by word meaning:\n" + WORD_BASE_URL + "?sura={}&aya={}".format(surah_display, ayat_display)
-                            bot.sendMessage(chat_id=chat_id, text=word_msg)
+                            # word_msg = "For word by word meaning:\n" + WORD_BASE_URL + "?sura={}&aya={}".format(surah_display, ayat_display)
+                            # bot.sendMessage(chat_id=chat_id, text=word_msg)
             else:
                 bot.sendMessage(chat_id=chat_id, text=HELP_MESSAGE, reply_to_message_id=msg_id)
 
@@ -189,7 +335,7 @@ def get_ayat_ar(surah, ayat):
         return data["quran"]["sura"][surah]["aya"][ayat]["text"]
 
 def get_ayat_en(surah, ayat):
-    json_data = open(os.path.join(app.static_folder, "clear.json"), "r")
+    json_data = open(os.path.join(app.static_folder, "haleem.json"), "r")
     data = json.load(json_data)
     if surah > 114 or surah == 114:
         return "Invalid surah number. Please send a surah number between 1 and 114."
@@ -249,6 +395,48 @@ def subscribe(user_id, chat_id):
 
 def unsubscribe(chat_id):
     subscriptionsDb.delete_subscription("{}".format(chat_id))
+
+
+# Gregorian Hijri Date Bot
+@app.route('/dateconverter/{}'.format(TOKEN), methods=['POST'])
+def date_bot_webhook():
+    update = telegram.update.Update.de_json(request.get_json(force=True), bot)
+    chat_id = update.message.chat.id
+    msg_id = update.message.message_id
+    text = update.message.text.encode('utf-8').decode()
+    input_date = text.lower()
+    try:
+        if input_date:
+            input_date_elements = input_date.split("/")
+            if len(input_date_elements) == 3:
+                year = int(input_date_elements[2])
+                month = int(input_date_elements[1])
+                day = int(input_date_elements[0])
+                try:
+                    hijri = convert.Hijri(year, month, day)
+                    if hijri:
+                        response = "Gregorian: {0}/{1}/{2}"
+                        greg = convert.Hijri(year, month, day).to_gregorian()
+                        response_text = response.format(greg.day, greg.month, greg.year)
+                        bot.sendMessage(chat_id=chat_id, text=response_text, reply_to_message_id=msg_id)
+                        return
+                except:
+                    try:
+                        gregorian = convert.Gregorian(year, month, day)
+                        if gregorian:
+                            response = "Hijri: {0}/{1}/{2}"
+                            hijri = convert.Gregorian(year, month, day).to_hijri()
+                            response_text = response.format(hijri.day, hijri.month, hijri.year)
+                            bot.sendMessage(chat_id=chat_id, text=response_text, reply_to_message_id=msg_id)
+                            return
+                    except:
+                        response_text = "Invalid date format: " + input_date
+                        bot.sendMessage(chat_id=chat_id, text=response_text, reply_to_message_id=msg_id)
+    except:
+        response_text = "Invalid date format: " + input_date
+        bot.sendMessage(chat_id=chat_id, text=response_text, reply_to_message_id=msg_id)
+
+    bot.sendMessage(chat_id=chat_id, text="Please enter a valid gregorian or hijri date in dd/mm/yyyy format", reply_to_message_id=msg_id)
 
 
 
