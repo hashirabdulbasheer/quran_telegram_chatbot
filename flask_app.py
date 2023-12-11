@@ -5,33 +5,20 @@ import random
 from quran_search import QuranSearch
 from quran_subscriptions_db import QuranSubscriptionsDB
 
-from ask_sdk_core.skill_builder import SkillBuilder
-from flask_ask_sdk.skill_adapter import SkillAdapter
-from ask_sdk_core.utils import is_request_type,is_intent_name
-from ask_sdk_core.handler_input import HandlerInput
-from ask_sdk_model.ui import SimpleCard
 from hijri_converter import convert
-from datetime import date
 
 from similar_verses_hugging import QuranSimilarVerses
-# import openai
 
 app = Flask(__name__)
 app.config['JSON_AS_ASCII'] = False
 
 # set the telegram token here
 TOKEN = os.getenv("TELEGRAM_TOKEN")
-
-bot = telegram.Bot(TOKEN)
-
+hugging_face_key = os.getenv("HUGGING_FACE_KEY")
 WORD_BASE_URL = "http://uxquran.com/apps/quran-ayat/"
 
+bot = telegram.Bot(TOKEN)
 subscriptionsDb = QuranSubscriptionsDB(os.path.join(app.static_folder, "daily.sqlite"))
-
-# openai.api_key  = os.getenv('OPENAI_API_KEY')
-
-hugging_face_key = os.getenv("HUGGING_FACE_KEY")
-
 aiChat = QuranSimilarVerses(app.static_folder,  "embeddings_hugg", "input.json", hugging_face_key)
 
 HELP_MESSAGE = """Assalamu Alaikum, Welcome to the Noble Quran chatbot.
@@ -50,120 +37,6 @@ HELP_MESSAGE = """Assalamu Alaikum, Welcome to the Noble Quran chatbot.
         /feedback - Send feedback
 """
 VERSION = "1.1.4"
-
-
-# alexa
-skill_builder = SkillBuilder()
-
-
-@skill_builder.request_handler(can_handle_func=is_request_type("LaunchRequest"))
-def launch_request_handler(handler_input):
-    indices = get_random_indices()
-    surah = indices[0]
-    ayat = indices[1]
-    surah_name = indices[2]
-    surah_display = surah + 1
-    ayat_display = ayat + 1
-    index_str = "Surah {} ({}:{}) ".format(surah_name, surah_display, ayat_display)
-    speech_text = "{}\n{}".format(index_str, get_ayat_en(surah, ayat))
-    card_text = "{}".format(get_ayat_en(surah, ayat))
-
-    return handler_input.response_builder.speak(speech_text).set_card(
-        SimpleCard(index_str, card_text)).set_should_end_session(
-        True).response
-
-
-@skill_builder.request_handler(can_handle_func=is_intent_name("randomIntent"))
-def random_intent_handler(handler_input):
-    indices = get_random_indices()
-    surah = indices[0]
-    ayat = indices[1]
-    surah_name = indices[2]
-    surah_display = surah + 1
-    ayat_display = ayat + 1
-    index_str = "Surah {} ({}:{}) ".format(surah_name, surah_display, ayat_display)
-    speech_text = "{}\n{}".format(index_str, get_ayat_en(surah, ayat))
-    card_text = "{}".format(get_ayat_en(surah, ayat))
-
-    return handler_input.response_builder.speak(speech_text).set_card(
-        SimpleCard(index_str, card_text)).set_should_end_session(
-        True).response
-
-
-@skill_builder.request_handler(can_handle_func=is_intent_name("AMAZON.HelpIntent"))
-def help_intent_handler(handler_input):
-    speech_text = "You can say - Alexa, open Quran's daily verse"
-
-    return handler_input.response_builder.speak(speech_text).ask(
-        speech_text).set_card(SimpleCard(
-            "uxQuran Help", speech_text)).response
-
-
-@skill_builder.request_handler(
-    can_handle_func=lambda handler_input:
-        is_intent_name("AMAZON.CancelIntent")(handler_input) or
-        is_intent_name("AMAZON.StopIntent")(handler_input))
-def cancel_and_stop_intent_handler(handler_input):
-    speech_text = "Goodbye!"
-
-    return handler_input.response_builder.speak(speech_text).set_card(
-        SimpleCard("uxQuran", speech_text)).response
-
-
-@skill_builder.request_handler(can_handle_func=is_intent_name("AMAZON.FallbackIntent"))
-def fallback_handler(handler_input):
-    speech = (
-        "The skill can't help you with that.  "
-        "You can say Alexa, open Quran's daily verse")
-    reprompt = "You can say Alexa, open Quran's daily verse"
-    handler_input.response_builder.speak(speech).ask(reprompt)
-    return handler_input.response_builder.response
-
-
-@skill_builder.request_handler(can_handle_func=is_request_type("SessionEndedRequest"))
-def session_ended_request_handler(handler_input):
-    return handler_input.response_builder.response
-
-
-@skill_builder.exception_handler(can_handle_func=lambda i, e: True)
-def all_exception_handler(handler_input, exception):
-    """Catch all exception handler, log exception and
-    respond with custom message.
-    """
-
-    speech = "Sorry, there was some problem. Please try again!!"
-    handler_input.response_builder.speak(speech).ask(speech)
-
-    return handler_input.response_builder.response
-
-
-skill_adapter = SkillAdapter(
-    skill=skill_builder.create(), skill_id="amzn1.ask.skill.c99ca83f-f519-4e43-aa47-8417b0312dc0", app=app)
-
-@app.route('/alexa', methods=['POST', 'GET'])
-def quran_bot_alexa():
-    return skill_adapter.dispatch_request()
-#     indices = get_random_indices()
-#     surah = indices[0]
-#     ayat = indices[1]
-#     surah_name = indices[2]
-#     surah_display = surah + 1
-#     ayat_display = ayat + 1
-#     index_str = "Surah {} ({}:{}) ".format(surah_name, surah_display, ayat_display)
-#     en_ayat = "{}\n{}".format(index_str, get_ayat_en(surah, ayat))
-#     resp = {
-#             "version": "string",
-#             "response": {
-#                 "outputSpeech": {
-#                         "type": "PlainText",
-#                         "text": "{}".format(en_ayat),
-#                         "playBehavior": "REPLACE_ENQUEUED"
-#                 },
-#             "shouldEndSession": True
-#         }
-#     }
-#     print("alexa called")
-#     return json.dumps(resp)
 
 
 # telegram bot
@@ -437,6 +310,7 @@ def date_bot_webhook():
         bot.sendMessage(chat_id=chat_id, text=response_text, reply_to_message_id=msg_id)
 
     bot.sendMessage(chat_id=chat_id, text="Please enter a valid gregorian or hijri date in dd/mm/yyyy format", reply_to_message_id=msg_id)
+
 
 
 
