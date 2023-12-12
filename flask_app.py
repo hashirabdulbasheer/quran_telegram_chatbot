@@ -14,12 +14,11 @@ app.config['JSON_AS_ASCII'] = False
 
 # set the telegram token here
 TOKEN = os.getenv("TELEGRAM_TOKEN")
-hugging_face_key = os.getenv("HUGGING_FACE_KEY")
 WORD_BASE_URL = "http://uxquran.com/apps/quran-ayat/"
 
 bot = telegram.Bot(TOKEN)
 subscriptionsDb = QuranSubscriptionsDB(os.path.join(app.static_folder, "daily.sqlite"))
-aiChat = QuranSimilarVerses(app.static_folder,  "embeddings_hugg", "input.json", hugging_face_key)
+aiChat = QuranSimilarVerses(app.static_folder,  "embeddings", "input.json")
 
 HELP_MESSAGE = """Assalamu Alaikum, Welcome to the Noble Quran chatbot.
 

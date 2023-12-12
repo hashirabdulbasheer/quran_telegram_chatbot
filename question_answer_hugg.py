@@ -27,7 +27,7 @@ class QuranSimilarVerses:
     # model used for qn and answering
     qa_model = None
 
-    def __init__(self, folder, quran_embeddings_name, translation_file, token):
+    def __init__(self, folder, quran_embeddings_name, translation_file):
         self.search_model = SentenceTransformer('all-MiniLM-l6-v2')
         
         # models: deepset/roberta-base-squad2-distilled, deepset/roberta-large-squad2, deepset/tinyroberta-squad2
@@ -106,7 +106,7 @@ class QuranSimilarVerses:
         return response
 
 
-# quran = QuranSimilarVerses("./static/", "embeddings", "input.json", "")
+# quran = QuranSimilarVerses("./static/", "embeddings", "input.json")
 # response, question, result = quran.get_similar("how long did ashabul khaf sleep in the cave?")
 # print(response)
 # answer = quran.get_answer(question, result)
