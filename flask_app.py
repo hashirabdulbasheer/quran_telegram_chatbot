@@ -7,7 +7,7 @@ from quran_subscriptions_db import QuranSubscriptionsDB
 
 from hijri_converter import convert
 
-from similar_verses_hugging import QuranSimilarVerses
+from question_answer_hugg import QuranSimilarVerses
 
 app = Flask(__name__)
 app.config['JSON_AS_ASCII'] = False
@@ -105,7 +105,7 @@ def quran_bot_webhook():
         params = text.replace("/ai", "" )
         if len(params) > 1:
             input = params
-            response_msg = aiChat.get_similar(input)
+            response_msg = aiChat.get_answer(input)
             # response_msg = "Sorry, ai is unavailable for sometime. we will bring it back on soon, Insha Allah"
             bot.sendMessage(chat_id=chat_id, text=response_msg, reply_to_message_id=msg_id)
         else:
