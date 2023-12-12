@@ -32,7 +32,7 @@ class QuranSimilarVerses:
         
         # models: deepset/roberta-base-squad2-distilled, deepset/roberta-large-squad2, deepset/tinyroberta-squad2
         # https://docs.cloud.deepset.ai/docs/language-models-in-deepset-cloud
-        self.qa_model = pipeline("question-answering", model="deepset/roberta-large-squad2")
+        self.qa_model = pipeline("question-answering", model="deepset/tinyroberta-squad2")
 
         # if first time, then unzip quran embeddings
         embedding_file_path = os.path.join(folder, quran_embeddings_name + ".npy")
@@ -57,8 +57,7 @@ class QuranSimilarVerses:
             verse = str(chapter) + "###" + str(verse) + "###" + text
             self.translation.append(verse)
 
-    
-    def get_answer(self, question):
+    def get_similar(self, question):            
         if self.quran_data is None:
             return "Error: Loading data, please try again after some time"
 
@@ -67,19 +66,9 @@ class QuranSimilarVerses:
 
         # get top 10 semantically simlar verses
         result = util.semantic_search(query_embeddings=embedding_input_string, corpus_embeddings=self.quran_data, top_k=10)
-        
-        # get the translation texts corresponding to the similar verses for context
-        results_text = ""
-        for item in result[0]:
-            index = item['corpus_id']
-            results_text = results_text + "," + self.translation[index]
-
-        # find an answer from the results_text as context
-        answer = self.qa_model(question = question, context = results_text)
 
         # generate the response
         response = "Qn: " +  question
-        response = response + "\nProbable Answer: " + answer['answer'] + "\n"
         response = response + "\nRefs:\n"
 
         # get top N results
@@ -95,9 +84,30 @@ class QuranSimilarVerses:
             response = response + str(sura) + ":" + str(aya) + " " + verse + "\n"
             response = response + "https://uxquran.com/apps/quran-ayat/?sura=" + sura + "&aya=" + aya + "\n\n"
 
+        return response, question, result
+    
+    def get_answer(self, question, search_result):
+        if self.quran_data is None:
+            return "Error: Loading data, please try again after some time"
+
+        # get the translation texts corresponding to the similar verses for context
+        results_text = ""
+        for item in search_result[0]:
+            index = item['corpus_id']
+            results_text = results_text + "," + self.translation[index]
+
+        # find an answer from the results_text as context
+        answer = self.qa_model(question = question, context = results_text)
+
+        # generate the response
+        response = "Qn: " +  question
+        response = response + "\nProbable Answer: " + answer['answer'] + "\n"
+
         return response
 
 
 # quran = QuranSimilarVerses("./static/", "embeddings", "input.json", "")
-# answer = quran.get_answer("how long did ashabul khaf sleep in the cave?")
+# response, question, result = quran.get_similar("how long did ashabul khaf sleep in the cave?")
+# print(response)
+# answer = quran.get_answer(question, result)
 # print(answer)

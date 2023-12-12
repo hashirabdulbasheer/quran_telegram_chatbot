@@ -105,7 +105,9 @@ def quran_bot_webhook():
         params = text.replace("/ai", "" )
         if len(params) > 1:
             input = params
-            response_msg = aiChat.get_answer(input)
+            response, question, result = aiChat.get_similar(input)
+            bot.sendMessage(chat_id=chat_id, text=response, reply_to_message_id=msg_id)
+            response_msg = aiChat.get_answer(question, result)
             # response_msg = "Sorry, ai is unavailable for sometime. we will bring it back on soon, Insha Allah"
             bot.sendMessage(chat_id=chat_id, text=response_msg, reply_to_message_id=msg_id)
         else:
