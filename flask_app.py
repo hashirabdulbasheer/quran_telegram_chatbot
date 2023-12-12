@@ -35,7 +35,7 @@ HELP_MESSAGE = """Assalamu Alaikum, Welcome to the Noble Quran chatbot.
         /version - Version of the bot
         /feedback - Send feedback
 """
-VERSION = "1.1.4"
+VERSION = "1.1.5"
 
 
 # telegram bot
