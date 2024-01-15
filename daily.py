@@ -6,13 +6,14 @@ import random
 from quran_subscriptions_db import QuranSubscriptionsDB
 from dotenv import load_dotenv
 import sys
+import time
 
-if len(sys.argv) < 1:
+if len(sys.argv) < 2:
     print("Please pass home directory as argument")
     exit(0)
 
 # load env
-project_home = sys.argv[0]
+project_home = sys.argv[1]
 load_dotenv(os.path.join(project_home, '.env'))
 
 WORD_BASE_URL = "http://uxquran.com/apps/quran-ayat/"
@@ -63,19 +64,22 @@ def get_ayat_en(surah, ayat):
 chat_ids = subscriptionsDb.select_all()
 if len(chat_ids) > 0:
     for chat_id in chat_ids:
-        indices = get_random_indices()
-        surah = indices[0]
-        ayat = indices[1]
-        surah_name = indices[2]
-        surah_display = surah + 1
-        ayat_display = ayat + 1
-        index_str = "Surah {} ({}:{}) ".format(surah_name, surah_display, ayat_display)
-        ar_ayat = "{}\n{}".format(index_str, get_ayat_ar(surah, ayat))
-        en_ayat = "{}\n{}".format(index_str, get_ayat_en(surah, ayat))
-        bot.sendMessage(chat_id=chat_id, text=ar_ayat)
-        bot.sendMessage(chat_id=chat_id, text=en_ayat)
-        word_msg = "For word by word meaning:\n" + WORD_BASE_URL + "?sura={}&aya={}".format(surah_display, ayat_display)
-        bot.sendMessage(chat_id=chat_id, text=word_msg)
-
+        try:
+            indices = get_random_indices()
+            surah = indices[0]
+            ayat = indices[1]
+            surah_name = indices[2]
+            surah_display = surah + 1
+            ayat_display = ayat + 1
+            index_str = "Surah {} ({}:{}) ".format(surah_name, surah_display, ayat_display)
+            ar_ayat = "{}\n{}".format(index_str, get_ayat_ar(surah, ayat))
+            en_ayat = "{}\n{}".format(index_str, get_ayat_en(surah, ayat))
+            bot.sendMessage(chat_id=chat_id, text=ar_ayat)
+            bot.sendMessage(chat_id=chat_id, text=en_ayat)
+            word_msg = "For word by word meaning:\n" + WORD_BASE_URL + "?sura={}&aya={}".format(surah_display, ayat_display)
+            bot.sendMessage(chat_id=chat_id, text=word_msg)
+            time.sleep(3)
+        except:
+            print("Error while sending daily to ", chat_id)
 
 
